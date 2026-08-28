@@ -1,0 +1,31 @@
+name: refresh
+on:
+  schedule:
+    - cron: "45 10 * * *"   # 07:45 BRT
+    - cron: "0 22 * * *"    # 19:00 BRT
+    - cron: "0 */2 * * *"   # a cada 2h (mantém fresco pro botão recarregar)
+  workflow_dispatch:        # botão / manual
+permissions:
+  contents: write
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Coleta ClickUp -> data.json
+        run: node engine/pull.mjs
+        env:
+          CLICKUP_TOKEN: ${{ secrets.CLICKUP_TOKEN }}
+      - name: Commit se mudou
+        run: |
+          git config user.name "daily-bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git diff --staged --quiet || git commit -m "chore: atualiza data.json [skip ci]"
+          git push
