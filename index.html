@@ -86,6 +86,17 @@ ul.lst{margin:6px 0 0;padding:0;list-style:none}
 .tag.duesoon{color:var(--warn)}
 .faixa .n,.kpi .n{font-weight:700}
 h1{font-weight:700}
+.gblock{border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:12px;overflow:hidden}
+.gblock>summary{cursor:pointer;padding:13px 16px;list-style:none;display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px}
+.gblock>summary::-webkit-details-marker{display:none}
+.gblock>summary::after{content:"▸";color:var(--muted);margin-left:auto;font-size:12px}
+.gblock[open]>summary::after{content:"▾"}
+.gblock[open]>summary{border-bottom:1px solid var(--line)}
+.gsdot{width:9px;height:9px;border-radius:50%;flex:none}
+.gstitle{flex:1}
+.gscount{font-family:"IBM Plex Mono";font-weight:600;font-size:13px;color:var(--ink2)}
+.gbody{padding:4px 16px 10px}
+.gmore{font-size:12px;color:var(--muted);padding:8px 4px 2px}
 .empty{color:var(--muted);font-size:13px;font-style:italic;margin:6px 0 0}
 .bars{display:flex;flex-direction:column;gap:9px}.bar{display:grid;grid-template-columns:150px 1fr 34px;align-items:center;gap:10px}
 .bar .nm{font-size:12.5px}.bar .tk{height:15px;background:var(--line2);border-radius:5px;overflow:hidden}.bar .tk>span{display:block;height:100%;background:var(--accent);border-radius:5px;opacity:.9}.bar .c{font-family:"IBM Plex Mono";font-size:12.5px;font-weight:600;text-align:right}
@@ -350,23 +361,25 @@ function renderGargalos(){var act=activeList();
  var atr=allAtr.filter(matchGF).sort(function(a,b){return a.dueMs-b.dueMs;});
  var imp=allImp.filter(matchGF).sort(byDaysDesc);
  var wait=act.filter(function(t){return t.status==="em aprovação"||t.status==="assinatura"||t.status==="enviado para o cliente";}).filter(matchGF).sort(byDaysDesc);
- var impCard='<div class="card alert"><div class="ch"><span class="ic" style="background:var(--crit)22;color:var(--crit)">⛔</span><h2>Impedimentos — o que está travado</h2><span class="c" style="color:var(--crit)">'+imp.length+'</span></div>'+
-  (imp.length?imp.map(function(t){return brow(t,'travada há <b>'+(t.daysIn||0)+'d</b>');}).join(""):'<p class="empty">'+(active?'Nenhum impedimento com esse filtro.':'Nenhum impedimento 🎉')+'</p>')+'</div>';
- var waitCard='<div class="card alert soft"><div class="ch"><span class="ic" style="background:var(--warn)22;color:var(--warn)">⌛</span><h2>Parados aguardando aprovação / cliente</h2><span class="c" style="color:var(--warn)">'+wait.length+'</span></div>'+
-  (wait.length?wait.map(function(t){return brow(t,'aguardando há <b>'+(t.daysIn||0)+'d</b> ('+esc(t.status)+')');}).join(""):'<p class="empty">'+(active?'Nada parado com esse filtro.':'Nada parado.')+'</p>')+'</div>';
+ function listBody(arr,tailfn,empty){return arr.length?arr.slice(0,15).map(function(t){return brow(t,tailfn(t));}).join("")+(arr.length>15?'<div class="gmore">+ '+(arr.length-15)+' — refine com os filtros acima</div>':''):'<p class="empty">'+empty+'</p>';}
+ var atrBody=listBody(atr,function(t){var od=Math.max(0,Math.floor((NOW-t.dueMs)/DAY));return 'atrasada há <b>'+od+'d</b>';},active?'Nenhuma atrasada com esse filtro.':'Nenhuma atrasada.');
+ var impBody=listBody(imp,function(t){return 'travada há <b>'+(t.daysIn||0)+'d</b>';},active?'Nenhum impedimento com esse filtro.':'Nenhum impedimento.');
+ var waitBody=listBody(wait,function(t){return 'aguardando há <b>'+(t.daysIn||0)+'d</b> ('+esc(t.status)+')';},active?'Nada parado com esse filtro.':'Nada parado.');
  var wr=wipRank();var wmax=1;wr.forEach(function(w){wmax=Math.max(wmax,w.total);});WIPN=wr.map(function(w){return w.name;});
- var wipCard='<div class="card"><div class="ch"><span class="ic" style="background:var(--accentbg);color:var(--accent)">👥</span><h2>Carga por pessoa (WIP)</h2><span class="c">'+wr.length+'</span></div>'+
-  wr.map(function(w,i){var over=w.total>=12;var col=over?"var(--crit)":"var(--accent)";var sel=(GF.who===w.name);
+ var wipBody=wr.map(function(w,i){var over=w.total>=12;var col=over?"var(--crit)":"var(--accent)";var sel=(GF.who===w.name);
    return '<div class="wrow pick'+(sel?' selp':'')+'" onclick="setGFwho('+i+')"><div class="wn"><span class="wav" style="background:'+col+'">'+esc(initials(w.name).toUpperCase())+'</span>'+esc(first(w.name))+'</div><div class="wtk"><span style="width:'+Math.round(w.total/wmax*100)+'%;background:'+col+'"></span></div><div class="wc"><b class="'+(over?'wover':'')+'">'+w.total+'</b> <span class="wp">'+w.prod+'▶</span></div></div>';}).join("")+
-  '<p class="note">Clique numa pessoa pra filtrar as listas acima · barra = ativas · ▶ = em produção · vermelho = ≥12.</p></div>';
+  '<p class="note">Clique numa pessoa pra filtrar · barra = ativas · ▶ = em produção · vermelho = ≥12.</p>';
  var cm={};act.forEach(function(t){var c=(t.client&&t.client!=="—")?t.client:null;if(!c)return;if(!cm[c])cm[c]={name:c,total:0,imp:0,ap:0};cm[c].total++;if(t.status==="impedimento")cm[c].imp++;if(t.status==="em aprovação"||t.status==="assinatura"||t.status==="enviado para o cliente")cm[c].ap++;});
  var cl=Object.keys(cm).map(function(k){return cm[k];}).sort(function(a,b){return b.total-a.total;}).slice(0,14);CLN=cl.map(function(c){return c.name;});
- var cliCard='<div class="card"><div class="ch"><span class="ic" style="background:var(--s-enviado)22;color:var(--s-enviado)">🏢</span><h2>Por cliente</h2><span class="c">'+cl.length+'</span></div>'+
-  (cl.length?'<div class="clg">'+cl.map(function(c,i){var fl="";if(c.imp)fl+='<span class="cflag" style="background:var(--s-impedimento)">⛔ '+c.imp+'</span>';if(c.ap)fl+='<span class="cflag" style="background:var(--s-aprovacao)">⌛ '+c.ap+'</span>';var sel=(GF.client===c.name);
-   return '<div class="crow pick'+(sel?' selp':'')+'" onclick="setGFcli('+i+')"><span class="cc">'+c.total+'</span><span class="cn">'+esc(c.name)+'</span><span class="cflags">'+fl+'</span></div>';}).join("")+'</div>':'<p class="empty">Sem cliente marcado nas demandas ativas.</p>')+'</div>';
- var atrCard='<div class="card alert"><div class="ch"><span class="ic" style="background:var(--crit)22;color:var(--crit)">🔴</span><h2>Atrasadas — prazo estourado</h2><span class="c" style="color:var(--crit)">'+atr.length+'</span></div>'+
-  (atr.length?atr.map(function(t){var od=Math.max(0,Math.floor((NOW-t.dueMs)/DAY));return brow(t,'atrasada há <b>'+od+'d</b>');}).join(""):'<p class="empty">'+(active?'Nenhuma atrasada com esse filtro.':'Nenhuma atrasada 🎉')+'</p>')+'</div>';
- document.getElementById("v-gargalos").innerHTML=bar+atrCard+impCard+waitCard+'<div class="grow">'+wipCard+cliCard+'</div>';
+ var cliBody=cl.length?'<div class="clg">'+cl.map(function(c,i){var fl="";if(c.imp)fl+='<span class="cflag" style="background:var(--s-impedimento)">'+c.imp+' imp.</span>';if(c.ap)fl+='<span class="cflag" style="background:var(--s-aprovacao)">'+c.ap+' aprov.</span>';var sel=(GF.client===c.name);
+   return '<div class="crow pick'+(sel?' selp':'')+'" onclick="setGFcli('+i+')"><span class="cc">'+c.total+'</span><span class="cn">'+esc(c.name)+'</span><span class="cflags">'+fl+'</span></div>';}).join("")+'</div>':'<p class="empty">Sem cliente marcado.</p>';
+ function gblock(title,n,col,body,open){return '<details class="gblock"'+(open?' open':'')+'><summary><span class="gsdot" style="background:'+col+'"></span><span class="gstitle">'+title+'</span><span class="gscount">'+n+'</span></summary><div class="gbody">'+body+'</div></details>';}
+ document.getElementById("v-gargalos").innerHTML=bar
+  +gblock("Atrasadas",atr.length,"var(--crit)",atrBody,atr.length>0)
+  +gblock("Impedimentos — travado",imp.length,"var(--crit)",impBody,imp.length>0)
+  +gblock("Aguardando aprovação / cliente",wait.length,"var(--warn)",waitBody,false)
+  +gblock("Carga por pessoa",wr.length,"var(--accent)",wipBody,false)
+  +gblock("Por cliente",cl.length,"var(--accent)",cliBody,false);
  var gb=document.getElementById("gbadge");var n=allImp.length+allAtr.length;if(n){gb.textContent=n;gb.style.display="";}else gb.style.display="none";}
 
 var HF={client:"",who:"",area:"",q:""};
