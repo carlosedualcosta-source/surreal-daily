@@ -24,6 +24,22 @@ h1{font-size:28px;font-weight:800}.sub{color:var(--ink2);font-size:13px;margin-t
 .tab:hover{color:var(--ink)}.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
 .tab .badge{font-family:"IBM Plex Mono";font-size:10px;font-weight:700;background:var(--crit);color:#fff;border-radius:20px;padding:0 6px;min-width:16px;text-align:center}
 .view{display:none}.view.on{display:block}
+.more{margin-bottom:18px}
+.more>summary{cursor:pointer;padding:12px 16px;font-weight:600;font-size:13px;color:var(--ink2);background:var(--panel);border:1px solid var(--line);border-radius:12px;list-style:none;box-shadow:var(--shadow)}
+.more>summary::-webkit-details-marker{display:none}
+.more>summary::before{content:"▸";color:var(--accent);margin-right:8px;display:inline-block}
+.more[open]>summary::before{content:"▾"}
+.more[open]>summary{border-radius:12px 12px 0 0;margin-bottom:14px}
+.more>summary:hover{color:var(--ink)}
+.morelink{border:0;background:none;color:var(--accent);font:inherit;font-weight:600;font-size:12.5px;cursor:pointer;padding:6px 16px 12px;text-align:left;display:block;width:100%}
+.morelink:hover{text-decoration:underline}
+.alertrow{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.alertbtn{flex:1;min-width:210px;display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--crit);border-radius:12px;padding:13px 16px;cursor:pointer;box-shadow:var(--shadow);font:inherit;text-align:left}
+.alertbtn:hover{border-color:var(--accent)}
+.alertbtn .ic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;flex:none}
+.alertbtn .n{font-family:"Archivo";font-weight:800;font-size:26px;line-height:1}
+.alertbtn .l{color:var(--ink2);font-size:13px;font-weight:600;flex:1}
+.alertbtn .algo{color:var(--accent);font-size:12px;font-weight:600;white-space:nowrap}
 .summary{background:linear-gradient(135deg,var(--accentbg),transparent);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:14px 18px;margin-bottom:18px}
 .summary .sl{font-size:14px;color:var(--ink);margin:3px 0;display:flex;gap:8px;align-items:baseline}
 .summary .sl b{font-weight:700}.summary .si{flex-shrink:0}
@@ -202,9 +218,8 @@ function taskItem(id,extra){var t=DATA.tasks[id];if(!t)return "";var who=(t.assi
  return '<li class="ti" onclick="openTask(\''+id+'\')"><span class="pill" style="background:'+scol(t.status)+'">'+esc(t.status)+'</span>'+
    '<span class="nm">'+esc(t.name)+'</span> '+dueTag(t)+' '+ageTag(t)+'<span class="meta">'+(t.client&&t.client!=="—"?"🏢 "+esc(t.client)+" · ":"")+esc(t.area)+' · '+esc(who)+(extra?' · '+extra:'')+'</span></li>';}
 
-function section(icon,title,color,ids,decorate){var items=(ids||[]).map(function(x){var id=x.id||x;var ex=decorate?decorate(x):"";return taskItem(id,ex);}).join("");
- return '<div class="card"><div class="ch"><span class="ic" style="background:'+color+'22;color:'+color+'">'+icon+'</span><h2>'+title+'</h2><span class="c" style="color:'+color+'">'+(ids?ids.length:0)+'</span></div>'+
-   (ids&&ids.length?'<ul class="lst">'+items+'</ul>':'<p class="empty">(nenhuma)</p>')+'</div>';}
+function section(icon,title,color,ids,decorate){if(!ids||!ids.length)return "";var items=ids.map(function(x){var id=x.id||x;var ex=decorate?decorate(x):"";return taskItem(id,ex);}).join("");
+ return '<div class="card"><div class="ch"><span class="ic" style="background:'+color+'22;color:'+color+'">'+icon+'</span><h2>'+title+'</h2><span class="c" style="color:'+color+'">'+ids.length+'</span></div><ul class="lst">'+items+'</ul></div>';}
 
 // ---- computados a partir das tasks ----
 function overdueLists(){var atr=[],ven=[];activeList().forEach(function(t){var di=dueInfo(t);if(di&&di.k==="due")atr.push(t);else if(di&&di.k==="duesoon")ven.push(t);});
@@ -234,15 +249,17 @@ function renderGeral(){var d=DATA,f=d.totals,pct=d.faixaPct||{};
   '<div class="faixa f-cliente"><div class="n mono">'+f.cliente+'</div><div class="l">🟢 Com cliente</div><div class="p">'+(pct.cliente||0)+'%</div></div>'+
   '<div class="faixa f-bloq"><div class="n mono">'+f.bloqueado+'</div><div class="l">🔴 Impedimento</div><div class="p">'+(pct.bloqueado||0)+'%</div></div></div>';
  var k=d.day||{};
- var kpis='<div class="kpis">'+
-  '<div class="kpi"><div class="n" style="color:var(--new)">'+(k.novas||0)+'</div><div class="l">🆕 Novas</div></div>'+
-  '<div class="kpi"><div class="n" style="color:var(--good)">'+(k.concluidas||0)+'</div><div class="l">✅ Concluídas</div></div>'+
-  '<div class="kpi"><div class="n" style="color:var(--warn)">'+(k.prodAprov||0)+'</div><div class="l">➡️ Prod→Aprov</div></div>'+
-  '<div class="kpi"><div class="n" style="color:var(--crit)">'+(k.novosImped||0)+'</div><div class="l">⛔ Novos imped.</div></div></div>';
- var ov=overdueLists();
- var alerts="";
- if(ov.atr.length)alerts+='<div class="card alert"><div class="ch"><span class="ic" style="background:var(--crit)22;color:var(--crit)">🔴</span><h2>Atrasadas</h2><span class="c" style="color:var(--crit)">'+ov.atr.length+'</span></div><ul class="lst">'+ov.atr.map(function(t){return taskItem(t.id);}).join("")+'</ul></div>';
- if(ov.ven.length)alerts+='<div class="card alert soft"><div class="ch"><span class="ic" style="background:var(--warn)22;color:var(--warn)">⏰</span><h2>Vencem em 48h</h2><span class="c" style="color:var(--warn)">'+ov.ven.length+'</span></div><ul class="lst">'+ov.ven.map(function(t){return taskItem(t.id);}).join("")+'</ul></div>';
+ var kp=[];
+ if(k.novas)kp.push('<div class="kpi"><div class="n" style="color:var(--new)">'+k.novas+'</div><div class="l">🆕 Novas</div></div>');
+ if(k.concluidas)kp.push('<div class="kpi"><div class="n" style="color:var(--good)">'+k.concluidas+'</div><div class="l">✅ Concluídas</div></div>');
+ if(k.prodAprov)kp.push('<div class="kpi"><div class="n" style="color:var(--warn)">'+k.prodAprov+'</div><div class="l">➡️ Prod→Aprov</div></div>');
+ if(k.novosImped)kp.push('<div class="kpi"><div class="n" style="color:var(--crit)">'+k.novosImped+'</div><div class="l">⛔ Novos imped.</div></div>');
+ var kpis=kp.length?'<div class="kpis" style="margin-bottom:18px">'+kp.join("")+'</div>':'';
+ var ov=overdueLists();var sc=stuckCount();
+ function alertCard(n,ic,col,title){if(!n)return "";
+  return '<button class="alertbtn" style="border-left-color:'+col+'" onclick="gotoTab(\'gargalos\')"><span class="ic" style="background:'+col+'22;color:'+col+'">'+ic+'</span><span class="n mono" style="color:'+col+'">'+n+'</span><span class="l">'+title+'</span><span class="algo">ver ›</span></button>';}
+ var av=alertCard(ov.atr.length,"🔴","var(--crit)","atrasadas")+alertCard(ov.ven.length,"⏰","var(--warn)","vencem em 48h")+alertCard(sc,"🕒","var(--move)","travadas há tempo");
+ var alerts=av?'<div class="alertrow">'+av+'</div>':'';
  var s=d.sections||{};
  var secs=section("✅","Concluídas desde a última foto","var(--good)",s.concluidas)+
   section("➡️","Passaram de Produção → Aprovação","var(--warn)",s.prodAprov)+
@@ -252,7 +269,8 @@ function renderGeral(){var d=DATA,f=d.totals,pct=d.faixaPct||{};
  var amax=1;(d.byArea||[]).forEach(function(a){if(a.n>amax)amax=a.n;});
  var bars=(d.byArea||[]).map(function(a){return '<div class="bar"><div class="nm">'+esc(a.area)+'</div><div class="tk"><span style="width:'+Math.round(a.n/amax*100)+'%"></span></div><div class="c">'+a.n+'</div></div>';}).join("");
  var carga='<div class="card"><div class="ch"><span class="ic" style="background:#8890a622;color:var(--ink2)">⏳</span><h2>Faltam concluir — carga por área</h2><span class="c">'+f.ativas+'</span></div><div class="bars">'+bars+'</div></div>';
- document.getElementById("v-geral").innerHTML=summary+faixas+kpis+alerts+secs+renderTrend()+carga;}
+ var detalhes=(secs||carga||renderTrend())?'<details class="more"><summary>Ver detalhes do dia (movimentações, carga e tendência)</summary>'+kpis+secs+carga+renderTrend()+'</details>':'';
+ document.getElementById("v-geral").innerHTML=summary+alerts+faixas+detalhes;}
 
 // ---- Kanban ----
 var BF=null,PEOPLE=[],KC={},EFF={};
@@ -354,6 +372,7 @@ function openTask(id){var t=DATA.tasks[id];if(!t)return;var who=(t.assignees&&t.
 function closeTask(){document.getElementById("ovl").classList.remove("on");}
 document.getElementById("ovl").addEventListener("click",function(e){if(e.target===this)closeTask();});
 
+function gotoTab(v){var b=document.querySelector('.tab[data-v="'+v+'"]');if(b){b.click();window.scrollTo({top:0,behavior:"smooth"});}}
 Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(b){b.addEventListener("click",function(){
  Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(x){x.classList.remove("on");});
  Array.prototype.forEach.call(document.querySelectorAll(".view"),function(x){x.classList.remove("on");});
