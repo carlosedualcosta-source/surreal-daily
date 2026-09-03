@@ -457,7 +457,7 @@ Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(b){b.add
  Array.prototype.forEach.call(document.querySelectorAll(".view"),function(x){x.classList.remove("on");});
  b.classList.add("on");b.setAttribute("aria-selected","true");document.getElementById("v-"+b.dataset.v).classList.add("on");});});
 
-var TRIGGER={owner:"carlosedualcosta-source",repo:"surreal-daily",token:""};
+var TRIGGER={owner:"carlosedualcosta-source",repo:"surreal-daily",proxy:""};
 function applyExclude(){var tk=DATA.tasks||{};for(var id in tk){var t=tk[id];if(t&&t.assignees&&t.assignees.length){t.assignees=t.assignees.filter(function(a){return EXCLUDE.indexOf(String(a).trim().split(/\s+/)[0].toLowerCase())<0;});}}}
 function setStatus(s){var e=document.getElementById("rstatus");if(e)e.textContent=s;}
 function setBtn(on){var b=document.getElementById("btnRefresh");if(b){b.disabled=!on;b.style.opacity=on?"1":".6";b.style.cursor=on?"pointer":"default";}}
@@ -473,12 +473,15 @@ function loadData(cb){fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(f
 var polls=0;
 function pollGh(prevIso){fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.json():{};}).then(function(d){if(d&&d.generatedAt&&d.generatedAt.iso!==prevIso&&d.totals){applyData(d);setBtn(true);setStatus("Atualizado agora · "+((d.generatedAt&&d.generatedAt.brt)||""));}else{polls++;if(polls>60){setBtn(true);setStatus("demorou — recarregue em instantes");return;}setStatus("Atualizando… ("+(polls*5)+"s)");setTimeout(function(){pollGh(prevIso);},5000);}}).catch(function(){polls++;if(polls>60){setBtn(true);setStatus("erro");return;}setTimeout(function(){pollGh(prevIso);},5000);});}
 function doRefresh(){
- if(!TRIGGER.token){var pIso=(DATA.generatedAt&&DATA.generatedAt.iso)||"";setBtn(false);setStatus("Recarregando…");
+ if(!TRIGGER.proxy){var pIso=(DATA.generatedAt&&DATA.generatedAt.iso)||"";setBtn(false);setStatus("Recarregando…");
   loadData(function(d){setBtn(true);var iso=(d&&d.generatedAt&&d.generatedAt.iso)||"";var brt=(d&&d.generatedAt&&d.generatedAt.brt)||"";
    if(iso&&iso!==pIso)setStatus("Novos dados carregados · "+brt);
-   else setStatus("Já é a versão mais recente ("+brt+") · coleta automática 07:45 e 19:00");});return;}
- setBtn(false);polls=0;var prevIso=(DATA.generatedAt&&DATA.generatedAt.iso)||"";setStatus("Atualizando… (rodando no GitHub, ~1-2 min)");
- fetch("https://api.github.com/repos/"+TRIGGER.owner+"/"+TRIGGER.repo+"/actions/workflows/refresh.yml/dispatches",{method:"POST",headers:{"Authorization":"token "+TRIGGER.token,"Accept":"application/vnd.github+json"},body:JSON.stringify({ref:"main"})}).then(function(r){if(r.status>=200&&r.status<300){setTimeout(function(){pollGh(prevIso);},8000);}else{setBtn(true);setStatus("erro ao disparar ("+r.status+")");}}).catch(function(){setBtn(true);setStatus("erro ao disparar");});
+   else setStatus("Já é a versão mais recente ("+brt+") · coleta automática a cada 2h");});return;}
+ setBtn(false);polls=0;var prevIso=(DATA.generatedAt&&DATA.generatedAt.iso)||"";setStatus("Disparando coleta no ClickUp… (~1-2 min)");
+ fetch(TRIGGER.proxy,{method:"POST"}).then(function(r){return r.json().catch(function(){return {ok:r.status>=200&&r.status<300};});}).then(function(j){
+  if(j&&j.ok){setStatus("Coletando dados novos… aguarde");setTimeout(function(){pollGh(prevIso);},8000);}
+  else{setBtn(true);setStatus("erro ao disparar"+(j&&j.status?" ("+j.status+")":""));}
+ }).catch(function(){setBtn(true);setStatus("erro ao disparar (rede)");});
 }
 loadData();
 </script>
