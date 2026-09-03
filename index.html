@@ -473,7 +473,10 @@ function loadData(cb){fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(f
 var polls=0;
 function pollGh(prevIso){fetch("data.json?t="+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.json():{};}).then(function(d){if(d&&d.generatedAt&&d.generatedAt.iso!==prevIso&&d.totals){applyData(d);setBtn(true);setStatus("Atualizado agora · "+((d.generatedAt&&d.generatedAt.brt)||""));}else{polls++;if(polls>60){setBtn(true);setStatus("demorou — recarregue em instantes");return;}setStatus("Atualizando… ("+(polls*5)+"s)");setTimeout(function(){pollGh(prevIso);},5000);}}).catch(function(){polls++;if(polls>60){setBtn(true);setStatus("erro");return;}setTimeout(function(){pollGh(prevIso);},5000);});}
 function doRefresh(){
- if(!TRIGGER.token){setStatus("Recarregando…");loadData(function(){setStatus("Recarregado "+((DATA.generatedAt&&DATA.generatedAt.brt)||""));});return;}
+ if(!TRIGGER.token){var pIso=(DATA.generatedAt&&DATA.generatedAt.iso)||"";setBtn(false);setStatus("Recarregando…");
+  loadData(function(d){setBtn(true);var iso=(d&&d.generatedAt&&d.generatedAt.iso)||"";var brt=(d&&d.generatedAt&&d.generatedAt.brt)||"";
+   if(iso&&iso!==pIso)setStatus("Novos dados carregados · "+brt);
+   else setStatus("Já é a versão mais recente ("+brt+") · coleta automática 07:45 e 19:00");});return;}
  setBtn(false);polls=0;var prevIso=(DATA.generatedAt&&DATA.generatedAt.iso)||"";setStatus("Atualizando… (rodando no GitHub, ~1-2 min)");
  fetch("https://api.github.com/repos/"+TRIGGER.owner+"/"+TRIGGER.repo+"/actions/workflows/refresh.yml/dispatches",{method:"POST",headers:{"Authorization":"token "+TRIGGER.token,"Accept":"application/vnd.github+json"},body:JSON.stringify({ref:"main"})}).then(function(r){if(r.status>=200&&r.status<300){setTimeout(function(){pollGh(prevIso);},8000);}else{setBtn(true);setStatus("erro ao disparar ("+r.status+")");}}).catch(function(){setBtn(true);setStatus("erro ao disparar");});
 }
