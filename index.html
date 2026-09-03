@@ -154,12 +154,14 @@ ul.lst{margin:6px 0 0;padding:0;list-style:none}
     <button class="tab" data-v="board">Kanban</button>
     <button class="tab" data-v="gargalos">Ação &amp; Gargalos <span class="badge" id="gbadge" style="display:none"></span></button>
     <button class="tab" data-v="hist">Histórico</button>
+    <button class="tab" data-v="posts">📍 Postagens Google</button>
   </div>
 
   <div class="view on" id="v-geral"></div>
   <div class="view" id="v-board"></div>
   <div class="view" id="v-gargalos"></div>
   <div class="view" id="v-hist"></div>
+  <div class="view" id="v-posts"></div>
 
   <div class="foot" id="foot"></div>
 </div>
@@ -376,4 +378,215 @@ function doRefresh(){
  fetch("https://api.github.com/repos/"+TRIGGER.owner+"/"+TRIGGER.repo+"/actions/workflows/refresh.yml/dispatches",{method:"POST",headers:{"Authorization":"token "+TRIGGER.token,"Accept":"application/vnd.github+json"},body:JSON.stringify({ref:"main"})}).then(function(r){if(r.status>=200&&r.status<300){setTimeout(function(){pollGh(prevIso);},8000);}else{setBtn(true);setStatus("erro ao disparar ("+r.status+")");}}).catch(function(){setBtn(true);setStatus("erro ao disparar");});
 }
 loadData();
+</script>
+
+<style>
+#v-posts .pgsub{color:var(--ink2);font-size:13px;margin:2px 0 14px;max-width:82ch}
+#v-posts .pgsub b{color:var(--ink)}
+#v-posts .pgkpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:720px){#v-posts .pgkpis{grid-template-columns:repeat(2,1fr)}}
+#v-posts .pgkpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+#v-posts .pgkpi .n{font-family:"Archivo";font-weight:800;font-size:25px;line-height:1}
+#v-posts .pgkpi .l{font-size:11px;color:var(--ink2);margin-top:5px}
+#v-posts .pgkpi .st{position:absolute;left:0;top:0;bottom:0;width:4px}
+#v-posts .pgkpi.k-posted .st{background:var(--good)}#v-posts .pgkpi.k-ready .st{background:var(--s-ajustes)}#v-posts .pgkpi.k-todo .st{background:var(--muted)}
+#v-posts .pgtb{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+#v-posts .pgb{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:9px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+#v-posts .pgb:hover{border-color:var(--accent);color:var(--accent)}
+#v-posts .pgb.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+#v-posts .pgnav{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+#v-posts .pgnav button{border:0;background:transparent;color:var(--ink2);padding:7px 10px;cursor:pointer;font-size:14px;font-family:inherit}
+#v-posts .pgnav button:hover{background:var(--accentbg);color:var(--accent)}
+#v-posts .pgnav .lbl{font-family:"IBM Plex Mono";font-size:12px;color:var(--ink2);padding:0 8px;white-space:nowrap}
+#v-posts .sp{flex:1}
+#v-posts .pglg{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--ink2);margin-bottom:12px;align-items:center}
+#v-posts .pglg .it{display:flex;align-items:center;gap:6px}
+#v-posts .lg{width:13px;height:13px;border-radius:3px;display:inline-block}
+#v-posts .lg.posted{background:var(--good)}#v-posts .lg.ready{background:var(--s-ajustes)}#v-posts .lg.todo{border:1.5px solid var(--muted)}
+#v-posts .pghint{margin-left:auto;color:var(--muted);font-size:11.5px}
+#v-posts .pgcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+#v-posts .pgscroll{overflow-x:auto}
+#v-posts table.pg{border-collapse:collapse;width:100%;min-width:980px}
+#v-posts .pg thead th{position:sticky;top:0;background:var(--panel2);z-index:2}
+#v-posts .pg th,#v-posts .pg td{text-align:center;padding:0;display:table-cell !important}
+#v-posts .ch{font-family:"IBM Plex Mono";font-size:11px;color:var(--ink2);padding:10px 4px;border-bottom:1px solid var(--line);white-space:nowrap}
+#v-posts .ch small{display:block;color:var(--muted);font-size:9px}
+#v-posts .ch.now{color:var(--accent)}
+#v-posts th.cn,#v-posts td.cn{text-align:left;position:sticky;left:0;background:var(--panel);z-index:1;min-width:200px;max-width:222px;padding:7px 10px;border-bottom:1px solid var(--line2);border-right:1px solid var(--line)}
+#v-posts thead th.cn{background:var(--panel2);z-index:3}
+#v-posts .crow{display:flex;align-items:center;gap:7px}
+#v-posts .cbody{min-width:0;flex:1}
+#v-posts .cnm{font-family:"Archivo";font-weight:700;font-size:13.5px;line-height:1.2;cursor:text;border-radius:4px;padding:1px 3px;margin:-1px -3px}
+#v-posts .cnm:hover{background:var(--accentbg)}
+#v-posts .csg{font-size:10px;color:var(--muted);cursor:text;border-radius:4px;padding:1px 3px;margin-top:1px}
+#v-posts .csg:hover{background:var(--accentbg)}
+#v-posts .cdot{width:7px;height:7px;border-radius:50%;flex:none}
+#v-posts .cdot.ativos{background:var(--good)}#v-posts .cdot.atencao{background:var(--warn)}#v-posts .cdot.parados{background:var(--crit)}#v-posts .cdot.sem{background:var(--crit)}
+#v-posts .del{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;opacity:0;padding:2px 4px;border-radius:4px;line-height:1}
+#v-posts td.cn:hover .del{opacity:1}
+#v-posts .del:hover{color:var(--crit)}
+#v-posts .ei{font-family:inherit;font-size:13px;border:1px solid var(--accent);border-radius:5px;padding:2px 5px;width:100%;background:var(--panel);color:var(--ink)}
+#v-posts td.cell{border-bottom:1px solid var(--line2);border-left:1px solid var(--line2);height:42px;width:72px;padding:4px}
+#v-posts td.cell.now{background:rgba(91,134,255,.07)}
+#v-posts td.cell.na{background:repeating-linear-gradient(45deg,transparent 0 3px,rgba(130,138,166,.14) 3px 6px)}
+#v-posts .naem{color:var(--muted);font-size:11px;opacity:.5}
+#v-posts .slots{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;align-items:center;max-width:60px;margin:0 auto}
+#v-posts .slot{width:12px;height:12px;border-radius:3px;cursor:pointer;transition:transform .08s}
+#v-posts .slot:hover{transform:scale(1.2)}
+#v-posts .slot.posted{background:var(--good)}
+#v-posts .slot.ready{background:var(--s-ajustes)}
+#v-posts .slot.todo{border:1.5px solid var(--muted)}
+#v-posts td.desde{border-bottom:1px solid var(--line2);border-left:1px solid var(--line);font-family:"IBM Plex Mono";font-size:10.5px;color:var(--ink2);white-space:nowrap;padding:0 9px;text-align:center}
+#v-posts td.desde.none{color:var(--muted);opacity:.6}
+#v-posts td.tot{border-bottom:1px solid var(--line2);border-left:1px solid var(--line);font-family:"Archivo";font-weight:800;font-size:14px;width:42px;font-variant-numeric:tabular-nums}
+#v-posts td.pc{border-bottom:1px solid var(--line2);padding:0 10px 0 8px;text-align:right}
+#v-posts .pill{font-family:"IBM Plex Mono";font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px;white-space:nowrap;display:inline-block;border:1px solid}
+#v-posts .pill.ativos{color:var(--good);border-color:var(--good)}
+#v-posts .pill.atencao{color:var(--warn);border-color:var(--warn)}
+#v-posts .pill.parados{color:var(--crit);border-color:var(--crit)}
+#v-posts .pill.sem{color:var(--crit);border-color:var(--crit)}
+#v-posts tr.sr td{border-top:2px solid var(--line);background:var(--panel2);height:36px;font-family:"IBM Plex Mono";font-size:10.5px;color:var(--ink2)}
+#v-posts tr.sr td.cn{background:var(--panel2);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+#v-posts .sm{display:flex;gap:5px;justify-content:center;font-family:"IBM Plex Mono";font-size:10px}
+#v-posts .sm .g{color:var(--good)}#v-posts .sm .o{color:var(--s-ajustes)}
+#v-posts .pgstat{font-family:"IBM Plex Mono";font-size:11px;color:var(--muted);margin-top:10px}
+</style>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+import { getFirestore, collection, doc, getDoc, getDocs, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+const firebaseConfig={apiKey:"AIzaSyCcEHZmlTZaRGgbyCWrU4qXCIGj5eWMA50",authDomain:"surreal-postagens.firebaseapp.com",projectId:"surreal-postagens",storageBucket:"surreal-postagens.firebasestorage.app",messagingSenderId:"456850028831",appId:"1:456850028831:web:33537b60f96e00ae66982a"};
+const app=initializeApp(firebaseConfig);const db=getFirestore(app);
+
+const PT=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+const META=4, DEFAULT_MONTH="2026-09";
+const SEED=[
+ {nome:"Casa Vilani",seg:"Eventos · Vitória",posts:{"2026-02":4,"2026-03":4,"2026-04":4,"2026-05":4,"2026-06":4,"2026-07":2,"2026-08":3,"older":1}},
+ {nome:"Chris Trajano Atelier",seg:"Moda · Vitória",posts:{"2026-02":3,"2026-03":4,"2026-06":3,"2026-07":4,"2026-08":4}},
+ {nome:"Fast Açaí Praia da Costa",seg:"Alimentação · Vila Velha",posts:{"2026-08":4}},
+ {nome:"Festtare Ateliê",seg:"Vestidos de festa · Vitória",posts:{"2026-03":4,"2026-06":4,"2026-07":4,"2026-08":4}},
+ {nome:"Garante Mudanças",seg:"Mudanças · Vila Velha",posts:{"2026-01":4,"2026-03":4,"older":4}},
+ {nome:"LISHT Fashion Mall",seg:"Moda · Rio de Janeiro",posts:{}},
+ {nome:"LISHT Rio Design Leblon",seg:"Moda · Rio de Janeiro",posts:{"2026-05":4}},
+ {nome:"Loja Sorvedoces — Av. Central",seg:"Sorveteria · Serra",posts:{"2026-01":4,"2026-02":4,"2026-03":4}},
+ {nome:"Loja Sorvedoces — Campo Grande",seg:"Sorveteria · Cariacica",posts:{"2026-01":4,"2026-02":4,"2026-03":4}},
+ {nome:"Loja Sorvedoces — Centro V.V.",seg:"Sorveteria · Vila Velha",posts:{"2026-01":4,"2026-02":4,"2026-03":4}},
+ {nome:"Loja Sorvedoces — Coelho Neto",seg:"Sorveteria · Serra",posts:{"2026-01":4,"2026-02":4,"2026-03":4}},
+ {nome:"Luiz Nunes Advogados",seg:"Advocacia · Vitória",posts:{"2026-03":4,"2026-04":4,"2026-07":4,"2026-08":3,"older":1}},
+ {nome:"Marvigran Granitos",seg:"Granitos · Cachoeiro",posts:{"2026-05":4}},
+ {nome:"Multpel Papéis e Embalagens",seg:"Embalagens · Cachoeiro",posts:{"2026-07":4,"2026-08":3}},
+ {nome:"Paradella Joalheria",seg:"Joalheria · Vitória",posts:{"2026-02":4,"2026-03":4}},
+ {nome:"Seadore",seg:"Varejo · Aracruz",posts:{"2026-02":2,"2026-03":4,"2026-05":4,"2026-06":4,"2026-07":4,"2026-08":1}},
+ {nome:"Sorvedoces Distribuidora",seg:"Distribuidora · Vila Velha",posts:{"2026-01":4,"2026-02":4,"2026-03":4,"2026-06":2,"2026-07":2,"2026-08":3}},
+ {nome:"Surreal Group",seg:"Agência · Vila Velha",posts:{"2026-03":4}},
+ {nome:"Zárex Homem",seg:"Aluguel de trajes · Vitória",posts:{"2026-06":4,"2026-07":4,"older":4}},
+ {nome:"Zárex Noivas",seg:"Aluguel de vestidos · Vitória",posts:{"2026-03":4,"2026-04":4,"2026-05":4,"2026-07":4,"2026-08":4}}
+];
+const DESDE={"Casa Vilani":"2025-11","Chris Trajano Atelier":"2025-10","Fast Açaí Praia da Costa":"2026-03","Festtare Ateliê":"2025-11","LISHT Fashion Mall":"2025-09","LISHT Rio Design Leblon":"2025-09","Luiz Nunes Advogados":"2025-09","Multpel Papéis e Embalagens":"2026-04","Paradella Joalheria":"2025-01","Seadore":"2025-07","Zárex Homem":"2026-03","Zárex Noivas":"2026-01"};
+SEED.forEach(c=>{if(DESDE[c.nome])c.desde=DESDE[c.nome];});
+
+const num=v=>Number(v)||0;
+const midx=k=>{const[y,m]=k.split("-").map(Number);return y*12+(m-1);};
+const kfrom=i=>{const y=Math.floor(i/12),m=i%12;return y+"-"+String(m+1).padStart(2,"0");};
+const isMK=k=>/^\d{4}-\d{2}$/.test(k);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function monthsShown(cur){const b=midx(cur),a=[];for(let i=0;i<9;i++){const idx=b-i,k=kfrom(idx),m=idx%12;a.push({key:k,lbl:PT[m],yr:String(Math.floor(idx/12)),now:i===0});}return a;}
+function fmtDesde(k){if(!k||!isMK(k))return"—";const p=k.split("-");return PT[(+p[1])-1]+"/"+p[0].slice(2);}
+function postedTotal(p){return Object.entries(p||{}).reduce((a,[k,v])=>a+num(v),0);}
+function olderSum(p,fk){let s=0;const fi=midx(fk);for(const[k,v]of Object.entries(p||{})){if(k==="older")s+=num(v);else if(isMK(k)&&midx(k)<fi)s+=num(v);}return s;}
+function statusOf(p,cur){let l=-1;for(const[k,v]of Object.entries(p||{})){if(isMK(k)&&num(v)>0)l=Math.max(l,midx(k));}if(postedTotal(p)===0)return"sem";if(l<0)return"parados";const d=midx(cur)-l;if(d<=1)return"ativos";if(d===2)return"atencao";return"parados";}
+const SRANK={sem:0,parados:1,atencao:2,ativos:3};
+const LABEL={ativos:"Em dia",atencao:"Atenção",parados:"Parado",sem:"Sem posts"};
+
+let STATE={clientes:[],config:{currentMonth:DEFAULT_MONTH}}, activeEdit=false, ready1=false, ready2=false;
+const cCol=collection(db,"clientes"), cfgRef=doc(db,"config","main");
+
+async function seedIfEmpty(){
+  try{
+    const snap=await getDocs(cCol);
+    if(snap.empty){for(let i=0;i<SEED.length;i++){const c=SEED[i];await setDoc(doc(db,"clientes","c"+i),{nome:c.nome,seg:c.seg,desde:c.desde||"",posts:c.posts,pronto:{},ordem:i});}}
+    const cs=await getDoc(cfgRef); if(!cs.exists())await setDoc(cfgRef,{currentMonth:DEFAULT_MONTH});
+  }catch(e){setStat("erro de conexão: "+e.code);}
+}
+function setStat(t){const e=document.getElementById("pgstat");if(e)e.textContent=t;}
+onSnapshot(cCol,s=>{STATE.clientes=s.docs.map(d=>({id:d.id,...d.data()}));ready1=true;render();},e=>setStat("erro: "+e.code));
+onSnapshot(cfgRef,s=>{STATE.config=s.exists()?s.data():{currentMonth:DEFAULT_MONTH};ready2=true;render();},e=>{});
+seedIfEmpty();
+
+async function setStatusOp(id,mes,p,r){setStat("salvando…");try{await updateDoc(doc(db,"clientes",id),{["posts."+mes]:p,["pronto."+mes]:r});setStat("salvo · compartilhado");}catch(e){setStat("erro ao salvar: "+e.code);}}
+async function updateCli(id,patch){try{await updateDoc(doc(db,"clientes",id),patch);}catch(e){setStat("erro: "+e.code);}}
+async function addCli(){try{await addDoc(cCol,{nome:"Novo cliente",seg:"",desde:"",posts:{},pronto:{},ordem:Date.now()});}catch(e){setStat("erro: "+e.code);}}
+async function delCli(id){try{await deleteDoc(doc(db,"clientes",id));}catch(e){setStat("erro: "+e.code);}}
+async function setCfg(patch){try{await setDoc(cfgRef,Object.assign({currentMonth:STATE.config.currentMonth||DEFAULT_MONTH},patch),{merge:true});}catch(e){setStat("erro: "+e.code);}}
+async function reorderOp(){const cur=STATE.config.currentMonth||DEFAULT_MONTH;const rows=STATE.clientes.map(c=>({c,st:statusOf(c.posts,cur),tot:postedTotal(c.posts)}));rows.sort((a,b)=>SRANK[a.st]-SRANK[b.st]||b.tot-a.tot||String(a.c.nome||"").localeCompare(String(b.c.nome||"")));for(let i=0;i<rows.length;i++){if(rows[i].c.ordem!==i)await updateCli(rows[i].c.id,{ordem:i});}}
+async function restoreAll(){setStat("restaurando…");try{const snap=await getDocs(cCol);for(const d of snap.docs)await deleteDoc(doc(db,"clientes",d.id));for(let i=0;i<SEED.length;i++){const c=SEED[i];await setDoc(doc(db,"clientes","c"+i),{nome:c.nome,seg:c.seg,desde:c.desde||"",posts:JSON.parse(JSON.stringify(c.posts)),pronto:{},ordem:i});}await setDoc(cfgRef,{currentMonth:DEFAULT_MONTH});setStat("restaurado");}catch(e){setStat("erro: "+e.code);}}
+
+function slotsHTML(id,mk,p,r,f){let s="";for(let i=0;i<p;i++)s+=`<span class="slot posted" data-id="${id}" data-mes="${mk}" data-st="posted" title="Postado — clique p/ voltar a fazer"></span>`;for(let i=0;i<r;i++)s+=`<span class="slot ready" data-id="${id}" data-mes="${mk}" data-st="ready" title="Pronto — clique p/ marcar postado"></span>`;for(let i=0;i<f;i++)s+=`<span class="slot todo" data-id="${id}" data-mes="${mk}" data-st="todo" title="A fazer — clique p/ marcar pronto"></span>`;return `<div class="slots">${s}</div>`;}
+
+function render(){
+  const host=document.getElementById("v-posts"); if(!host)return; if(activeEdit)return;
+  const cur=(STATE.config&&STATE.config.currentMonth)||DEFAULT_MONTH;
+  const months=monthsShown(cur), firstKey=months[months.length-1].key;
+  const rows=STATE.clientes.map(c=>({c,st:statusOf(c.posts,cur),tot:postedTotal(c.posts)}));
+  rows.sort((a,b)=>((a.c.ordem==null?1e9:a.c.ordem)-(b.c.ordem==null?1e9:b.c.ordem))||String(a.c.nome||"").localeCompare(String(b.c.nome||"")));
+  let kp=0,kr=0,kf=0,stock=0;
+  STATE.clientes.forEach(c=>{kp+=num((c.posts||{})[cur]);kr+=num((c.pronto||{})[cur]);kf+=Math.max(0,META-num((c.posts||{})[cur])-num((c.pronto||{})[cur]));Object.keys(c.pronto||{}).forEach(k=>{if(isMK(k))stock+=num(c.pronto[k]);});});
+  const cm=months[0].lbl+"/"+months[0].yr.slice(2);
+  let h=`<p class="pgsub"><b>Controle de postagens do Google.</b> Cada mês tem 4 vagas (meta 4/mês). <b>Clique numa vaga</b> para alternar: a fazer → pronto → postado. Salva sozinho e sincroniza pra equipe.</p>`;
+  h+=`<div class="pgkpis">
+    <div class="pgkpi k-posted"><span class="st"></span><div class="n">${kp}</div><div class="l">🟩 Postados em ${cm}</div></div>
+    <div class="pgkpi k-ready"><span class="st"></span><div class="n">${kr}</div><div class="l">🟧 Prontos p/ postar em ${cm}</div></div>
+    <div class="pgkpi k-todo"><span class="st"></span><div class="n">${kf}</div><div class="l">⬜ A fazer em ${cm}</div></div>
+    <div class="pgkpi k-ready"><span class="st"></span><div class="n">${stock}</div><div class="l">🟧 Estoque pronto (todos os meses)</div></div></div>`;
+  h+=`<div class="pgtb"><button class="pgb primary" data-act="add">+ Cliente</button><button class="pgb" data-act="reorder">↕ Reordenar</button>
+    <div class="pgnav"><button data-act="prev">◀</button><span class="lbl">${months[8].lbl}/${months[8].yr.slice(2)} – ${months[0].lbl}/${months[0].yr.slice(2)}</span><button data-act="next">▶</button></div>
+    <div class="sp"></div><button class="pgb" data-act="restore">⟲ Restaurar Google</button><button class="pgb" data-act="csv">Exportar CSV</button></div>`;
+  h+=`<div class="pglg"><span class="it"><span class="lg posted"></span> Postado</span><span class="it"><span class="lg ready"></span> Pronto (falta postar)</span><span class="it"><span class="lg todo"></span> A fazer</span><span class="pghint">clique numa vaga para alternar · hachurado = antes do contrato</span></div>`;
+  h+=`<div class="pgcard"><div class="pgscroll"><table class="pg"><thead><tr><th class="cn ch" style="text-align:left">Cliente</th>`;
+  months.forEach(m=>{h+=`<th class="ch${m.now?' now':''}">${m.lbl}<small>${m.yr}</small></th>`;});
+  h+=`<th class="ch">2025−<small>e antes</small></th><th class="ch">Desde<small>cliente</small></th><th class="ch">Post.<small>total</small></th><th class="ch" style="text-align:right;padding-right:12px">Status</th></tr></thead><tbody>`;
+  rows.forEach(({c,st,tot})=>{
+    const pre=c.desde&&isMK(c.desde)?c.desde:null;
+    h+=`<tr data-id="${c.id}"><td class="cn"><div class="crow"><span class="cdot ${st}"></span><div class="cbody"><div class="cnm" data-edit="nome">${esc(c.nome)}</div><div class="csg" data-edit="seg">${esc(c.seg||"")}</div></div><button class="del" title="Remover">✕</button></div></td>`;
+    months.forEach(m=>{const before=pre&&m.key<pre;if(before){h+=`<td class="cell na${m.now?' now':''}"><span class="naem">·</span></td>`;return;}const p=num((c.posts||{})[m.key]),r=num((c.pronto||{})[m.key]),tt=Math.max(META,p+r),f=Math.max(0,tt-p-r);h+=`<td class="cell${m.now?' now':''}">${slotsHTML(c.id,m.key,p,r,f)}</td>`;});
+    const ob=olderSum(c.posts,firstKey);
+    h+=`<td class="cell"><div class="slots">${ob>0?`<span style="font-family:'IBM Plex Mono';font-size:12px;color:var(--ink2)">${ob}</span>`:'<span class="naem">·</span>'}</div></td>`;
+    h+=`<td class="desde${pre?'':' none'}">${fmtDesde(c.desde)}</td><td class="tot">${tot}</td><td class="pc"><span class="pill ${st}">${LABEL[st]}</span></td></tr>`;
+  });
+  const sums=months.map(m=>{let p=0,r=0;STATE.clientes.forEach(c=>{const pre=c.desde&&isMK(c.desde)?c.desde:null;if(pre&&m.key<pre)return;p+=num((c.posts||{})[m.key]);r+=num((c.pronto||{})[m.key]);});return{p,r};});
+  h+=`<tr class="sr"><td class="cn">Total</td>`;sums.forEach((s,i)=>{h+=`<td class="${months[i].now?'now':''}"><div class="sm"><b class="g">${s.p}</b>${s.r?`<b class="o">+${s.r}</b>`:''}</div></td>`;});h+=`<td></td><td></td><td></td><td></td></tr>`;
+  h+=`</tbody></table></div></div><div class="pgstat" id="pgstat">${(ready1&&ready2)?'salvo · compartilhado':'conectando…'}</div>`;
+  host.innerHTML=h;
+}
+
+function startEdit(el){
+  if(activeEdit)return;activeEdit=true;
+  const id=el.closest("tr").dataset.id,field=el.dataset.edit;
+  const c=STATE.clientes.find(x=>x.id===id);const val=c?(c[field]||""):"";
+  el.innerHTML=`<input class="ei" value="${esc(val)}">`;const inp=el.querySelector("input");inp.focus();inp.select();
+  let done=false;const fin=async(commit)=>{if(done)return;done=true;activeEdit=false;if(commit&&inp.value!==val)await updateCli(id,{[field]:inp.value});render();};
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();fin(true);}else if(e.key==="Escape")fin(false);});
+  inp.addEventListener("blur",()=>fin(true));
+}
+function exportCSV(){
+  const cur=STATE.config.currentMonth||DEFAULT_MONTH;const months=monthsShown(cur).slice().reverse();
+  const rows=STATE.clientes.map(c=>({c,st:statusOf(c.posts,cur)})).sort((a,b)=>((a.c.ordem==null?1e9:a.c.ordem)-(b.c.ordem==null?1e9:b.c.ordem)));
+  const head=["Cliente","Segmento","Cliente desde",...months.map(m=>m.lbl+"/"+m.yr.slice(2)+" (post/pronto/afazer)"),"Postados "+monthsShown(cur)[0].lbl,"Prontos "+monthsShown(cur)[0].lbl,"A fazer "+monthsShown(cur)[0].lbl,"Estoque pronto","Status"];
+  const lines=[head.join(",")];
+  rows.forEach(({c,st})=>{const pre=c.desde&&isMK(c.desde)?c.desde:null;const cells=months.map(m=>{if(pre&&m.key<pre)return '"—"';const p=num((c.posts||{})[m.key]),r=num((c.pronto||{})[m.key]),f=Math.max(0,META-p-r);return `"${p}/${r}/${f}"`;});const cp=num((c.posts||{})[cur]),cr=num((c.pronto||{})[cur]),cf=Math.max(0,META-cp-cr);let stk=0;Object.keys(c.pronto||{}).forEach(k=>{if(isMK(k))stk+=num(c.pronto[k]);});lines.push([`"${(c.nome||'').replace(/"/g,'""')}"`,`"${(c.seg||'').replace(/"/g,'""')}"`,`"${fmtDesde(c.desde)}"`,...cells,cp,cr,cf,stk,LABEL[st]].join(","));});
+  const csv="﻿"+lines.join("\r\n");const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ronda-postagens.csv";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+}
+
+document.getElementById("v-posts").addEventListener("click",async e=>{
+  const slot=e.target.closest(".slot");
+  if(slot){const id=slot.dataset.id,mes=slot.dataset.mes,stt=slot.dataset.st;const c=STATE.clientes.find(x=>x.id===id);if(!c)return;let p=num((c.posts||{})[mes]),r=num((c.pronto||{})[mes]);if(stt==="todo")r++;else if(stt==="ready"){r--;p++;}else if(stt==="posted")p--;p=Math.max(0,p);r=Math.max(0,r);await setStatusOp(id,mes,p,r);return;}
+  const del=e.target.closest(".del");if(del){const tr=del.closest("tr");if(confirm('Remover "'+tr.querySelector(".cnm").textContent+'" do painel?'))delCli(tr.dataset.id);return;}
+  const te=e.target.closest("[data-edit]");if(te){startEdit(te);return;}
+  const b=e.target.closest("[data-act]");if(!b)return;const act=b.dataset.act;
+  if(act==="add")addCli();
+  else if(act==="reorder")reorderOp();
+  else if(act==="prev")setCfg({currentMonth:kfrom(midx(STATE.config.currentMonth||DEFAULT_MONTH)-1)});
+  else if(act==="next")setCfg({currentMonth:kfrom(midx(STATE.config.currentMonth||DEFAULT_MONTH)+1)});
+  else if(act==="restore"){if(confirm("Restaurar TODOS os dados como foram puxados do Google? Isso apaga as marcações de pronto/a fazer e edições."))restoreAll();}
+  else if(act==="csv")exportCSV();
+});
 </script>
