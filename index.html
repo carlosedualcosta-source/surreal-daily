@@ -452,6 +452,25 @@ loadData();
 #v-posts .sm{display:flex;gap:5px;justify-content:center;font-family:"IBM Plex Mono";font-size:10px}
 #v-posts .sm .g{color:var(--good)}#v-posts .sm .o{color:var(--s-ajustes)}
 #v-posts .pgstat{font-family:"IBM Plex Mono";font-size:11px;color:var(--muted);margin-top:10px}
+#v-posts .pgnav2{display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+#v-posts .pgtab2{appearance:none;border:0;background:none;font:inherit;font-weight:600;font-size:13.5px;color:var(--muted);padding:8px 13px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+#v-posts .pgtab2:hover{color:var(--ink)}
+#v-posts .pgtab2.on{color:var(--accent);border-bottom-color:var(--accent)}
+#v-posts .addcard{padding:14px 16px;margin-bottom:16px}
+#v-posts .addtitle{font-family:"Archivo";font-weight:700;font-size:14px;margin-bottom:10px}
+#v-posts .addgrid{display:grid;grid-template-columns:1.4fr 1.7fr 140px auto;gap:8px;align-items:center}
+@media(max-width:640px){#v-posts .addgrid{grid-template-columns:1fr}}
+#v-posts .ei2{font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--panel2);color:var(--ink);width:100%}
+#v-posts .ei2:focus{outline:none;border-color:var(--accent)}
+#v-posts .pgb.danger{color:var(--crit);border-color:transparent;background:transparent}
+#v-posts .pgb.danger:hover{border-color:var(--crit);color:var(--crit)}
+#v-posts table.clitab{min-width:640px}
+#v-posts .clitab td{border-bottom:1px solid var(--line2);height:44px;padding:0 10px;font-size:13px}
+#v-posts .clitab td.cl-n{text-align:left;padding-left:14px}
+#v-posts .clitab td.cl-n b{font-family:"Archivo";font-weight:700}
+#v-posts .clitab td.cl-s{text-align:left;color:var(--ink2);font-size:12px}
+#v-posts .clitab .cdot{margin-right:7px;display:inline-block;vertical-align:middle}
+#v-posts .clitab .mono2{font-family:"IBM Plex Mono";font-size:12px;color:var(--ink2);text-align:center}
 </style>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
@@ -483,7 +502,7 @@ const SEED=[
  {nome:"Zárex Homem",seg:"Aluguel de trajes · Vitória",posts:{"2026-06":4,"2026-07":4,"older":4}},
  {nome:"Zárex Noivas",seg:"Aluguel de vestidos · Vitória",posts:{"2026-03":4,"2026-04":4,"2026-05":4,"2026-07":4,"2026-08":4}}
 ];
-const DESDE={"Casa Vilani":"2025-11","Chris Trajano Atelier":"2025-10","Fast Açaí Praia da Costa":"2026-03","Festtare Ateliê":"2025-11","LISHT Fashion Mall":"2025-09","LISHT Rio Design Leblon":"2025-09","Luiz Nunes Advogados":"2025-09","Multpel Papéis e Embalagens":"2026-04","Paradella Joalheria":"2025-01","Seadore":"2025-07","Zárex Homem":"2026-03","Zárex Noivas":"2026-01"};
+const DESDE={"Casa Vilani":"2025-11","Chris Trajano Atelier":"2025-10","Fast Açaí Praia da Costa":"2026-05","Festtare Ateliê":"2025-11","LISHT Fashion Mall":"2025-09","LISHT Rio Design Leblon":"2025-09","Luiz Nunes Advogados":"2025-09","Multpel Papéis e Embalagens":"2026-04","Paradella Joalheria":"2025-01","Seadore":"2025-07","Zárex Homem":"2026-03","Zárex Noivas":"2026-01"};
 SEED.forEach(c=>{if(DESDE[c.nome])c.desde=DESDE[c.nome];});
 
 const num=v=>Number(v)||0;
@@ -499,7 +518,7 @@ function statusOf(p,cur){let l=-1;for(const[k,v]of Object.entries(p||{})){if(isM
 const SRANK={sem:0,parados:1,atencao:2,ativos:3};
 const LABEL={ativos:"Em dia",atencao:"Atenção",parados:"Parado",sem:"Sem posts"};
 
-let STATE={clientes:[],config:{currentMonth:DEFAULT_MONTH}}, activeEdit=false, ready1=false, ready2=false;
+let STATE={clientes:[],config:{currentMonth:DEFAULT_MONTH}}, activeEdit=false, ready1=false, ready2=false, pgView="grade";
 const cCol=collection(db,"clientes"), cfgRef=doc(db,"config","main");
 
 async function seedIfEmpty(){
@@ -524,8 +543,34 @@ async function restoreAll(){setStat("restaurando…");try{const snap=await getDo
 
 function slotsHTML(id,mk,p,r,f){let s="";for(let i=0;i<p;i++)s+=`<span class="slot posted" data-id="${id}" data-mes="${mk}" data-st="posted" title="Postado — clique p/ voltar a fazer"></span>`;for(let i=0;i<r;i++)s+=`<span class="slot ready" data-id="${id}" data-mes="${mk}" data-st="ready" title="Pronto — clique p/ marcar postado"></span>`;for(let i=0;i<f;i++)s+=`<span class="slot todo" data-id="${id}" data-mes="${mk}" data-st="todo" title="A fazer — clique p/ marcar pronto"></span>`;return `<div class="slots">${s}</div>`;}
 
+async function addCliData(nome,seg,desde){try{await addDoc(cCol,{nome,seg:seg||"",desde:desde||"",posts:{},pronto:{},ordem:Date.now()});setStat("cliente adicionado");}catch(e){setStat("erro: "+e.code);}}
+function renderClientes(){
+  const host=document.getElementById("pgbody"); if(!host)return;
+  const cur=(STATE.config&&STATE.config.currentMonth)||DEFAULT_MONTH;
+  const val=id=>{const el=document.getElementById(id);return el?el.value:"";};
+  const draft={n:val("ac-nome"),s:val("ac-seg"),d:val("ac-desde")};
+  const rows=STATE.clientes.slice().sort((a,b)=>((a.ordem==null?1e9:a.ordem)-(b.ordem==null?1e9:b.ordem))||String(a.nome||"").localeCompare(String(b.nome||"")));
+  let h=`<p class="pgsub">Adicione ou remova clientes do controle. Salva sozinho e aparece pra toda a equipe. <b>Remover aqui só tira do painel</b> — não mexe no Google.</p>`;
+  h+=`<div class="pgcard addcard"><div class="addtitle">+ Adicionar cliente</div><div class="addgrid">
+    <input class="ei2" id="ac-nome" placeholder="Nome do cliente" value="${esc(draft.n)}">
+    <input class="ei2" id="ac-seg" placeholder="Segmento · Cidade (ex.: Moda · Vitória)" value="${esc(draft.s)}">
+    <input class="ei2" id="ac-desde" type="month" title="Mês de entrada" value="${esc(draft.d)}">
+    <button class="pgb primary" data-act="addcli">Adicionar</button></div></div>`;
+  h+=`<div class="pgcard"><div class="pgscroll"><table class="pg clitab"><thead><tr>
+    <th class="ch" style="text-align:left;padding-left:14px">Cliente</th><th class="ch" style="text-align:left">Segmento</th><th class="ch">Entrada</th><th class="ch">Posts</th><th class="ch">Status</th><th class="ch">Ação</th></tr></thead><tbody>`;
+  rows.forEach(c=>{const st=statusOf(c.posts,cur),tot=postedTotal(c.posts);
+    h+=`<tr data-id="${c.id}"><td class="cl-n"><span class="cdot ${st}"></span><b>${esc(c.nome)}</b></td>
+      <td class="cl-s">${esc(c.seg||"—")}</td><td class="mono2">${fmtDesde(c.desde)}</td><td class="mono2">${tot}</td>
+      <td style="text-align:center"><span class="pill ${st}">${LABEL[st]}</span></td>
+      <td style="text-align:center"><button class="pgb danger" data-act="delcli" data-id="${c.id}">✕ Remover</button></td></tr>`;});
+  h+=`</tbody></table></div></div><div class="pgstat">${STATE.clientes.length} clientes no controle</div>`;
+  host.innerHTML=h;
+}
 function render(){
-  const host=document.getElementById("v-posts"); if(!host)return; if(activeEdit)return;
+  const outer=document.getElementById("v-posts"); if(!outer)return; if(activeEdit)return;
+  outer.innerHTML=`<div class="pgnav2"><button class="pgtab2 ${pgView==='grade'?'on':''}" data-view="grade">📊 Grade de postagens</button><button class="pgtab2 ${pgView==='clientes'?'on':''}" data-view="clientes">👥 Gerir clientes</button></div><div id="pgbody"></div>`;
+  if(pgView==='clientes')return renderClientes();
+  const host=document.getElementById("pgbody"); if(!host)return;
   const cur=(STATE.config&&STATE.config.currentMonth)||DEFAULT_MONTH;
   const months=monthsShown(cur), firstKey=months[months.length-1].key;
   const rows=STATE.clientes.map(c=>({c,st:statusOf(c.posts,cur),tot:postedTotal(c.posts)}));
@@ -579,12 +624,15 @@ function exportCSV(){
 }
 
 document.getElementById("v-posts").addEventListener("click",async e=>{
+  const nav=e.target.closest("[data-view]");if(nav){pgView=nav.dataset.view;render();return;}
   const slot=e.target.closest(".slot");
   if(slot){const id=slot.dataset.id,mes=slot.dataset.mes,stt=slot.dataset.st;const c=STATE.clientes.find(x=>x.id===id);if(!c)return;let p=num((c.posts||{})[mes]),r=num((c.pronto||{})[mes]);if(stt==="todo")r++;else if(stt==="ready"){r--;p++;}else if(stt==="posted")p--;p=Math.max(0,p);r=Math.max(0,r);await setStatusOp(id,mes,p,r);return;}
   const del=e.target.closest(".del");if(del){const tr=del.closest("tr");if(confirm('Remover "'+tr.querySelector(".cnm").textContent+'" do painel?'))delCli(tr.dataset.id);return;}
   const te=e.target.closest("[data-edit]");if(te){startEdit(te);return;}
   const b=e.target.closest("[data-act]");if(!b)return;const act=b.dataset.act;
   if(act==="add")addCli();
+  else if(act==="addcli"){const nm=(document.getElementById("ac-nome").value||"").trim();if(!nm){alert("Digite o nome do cliente.");return;}addCliData(nm,(document.getElementById("ac-seg").value||"").trim(),(document.getElementById("ac-desde").value||"").trim());}
+  else if(act==="delcli"){const id=b.dataset.id;const c=STATE.clientes.find(x=>x.id===id);if(confirm('Remover "'+(c?c.nome:'')+'" do controle?\n\n(Só tira do painel — NÃO mexe no Google Empresas.)'))delCli(id);}
   else if(act==="reorder")reorderOp();
   else if(act==="prev")setCfg({currentMonth:kfrom(midx(STATE.config.currentMonth||DEFAULT_MONTH)-1)});
   else if(act==="next")setCfg({currentMonth:kfrom(midx(STATE.config.currentMonth||DEFAULT_MONTH)+1)});
