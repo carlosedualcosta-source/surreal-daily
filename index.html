@@ -457,7 +457,7 @@ Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(b){b.add
  Array.prototype.forEach.call(document.querySelectorAll(".view"),function(x){x.classList.remove("on");});
  b.classList.add("on");b.setAttribute("aria-selected","true");document.getElementById("v-"+b.dataset.v).classList.add("on");});});
 
-var TRIGGER={owner:"carlosedualcosta-source",repo:"surreal-daily",proxy:""};
+var TRIGGER={owner:"carlosedualcosta-source",repo:"surreal-daily",proxy:"https://surreal-daily-refresh.carlosedualcosta.workers.dev"};
 function applyExclude(){var tk=DATA.tasks||{};for(var id in tk){var t=tk[id];if(t&&t.assignees&&t.assignees.length){t.assignees=t.assignees.filter(function(a){return EXCLUDE.indexOf(String(a).trim().split(/\s+/)[0].toLowerCase())<0;});}}}
 function setStatus(s){var e=document.getElementById("rstatus");if(e)e.textContent=s;}
 function setBtn(on){var b=document.getElementById("btnRefresh");if(b){b.disabled=!on;b.style.opacity=on?"1":".6";b.style.cursor=on?"pointer":"default";}}
