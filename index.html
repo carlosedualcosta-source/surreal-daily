@@ -756,12 +756,23 @@ function startEdit(el){
   inp.addEventListener("blur",()=>fin(true));
 }
 function exportCSV(){
-  const cur=STATE.config.currentMonth||DEFAULT_MONTH;const months=monthsShown(cur).slice().reverse();
-  const rows=STATE.clientes.map(c=>({c,st:statusOf(c.posts,cur)})).sort((a,b)=>((a.c.ordem==null?1e9:a.c.ordem)-(b.c.ordem==null?1e9:b.c.ordem)));
-  const head=["Cliente","Segmento","Cliente desde",...months.map(m=>m.lbl+"/"+m.yr.slice(2)+" (post/pronto/afazer)"),"Postados "+monthsShown(cur)[0].lbl,"Prontos "+monthsShown(cur)[0].lbl,"A fazer "+monthsShown(cur)[0].lbl,"Estoque pronto","Status"];
-  const lines=[head.join(",")];
-  rows.forEach(({c,st})=>{const pre=c.desde&&isMK(c.desde)?c.desde:null;const cells=months.map(m=>{if(pre&&m.key<pre)return '"—"';const p=num((c.posts||{})[m.key]),r=num((c.pronto||{})[m.key]),f=Math.max(0,META-p-r);return `"${p}/${r}/${f}"`;});const cp=num((c.posts||{})[cur]),cr=num((c.pronto||{})[cur]),cf=Math.max(0,META-cp-cr);let stk=0;Object.keys(c.pronto||{}).forEach(k=>{if(isMK(k))stk+=num(c.pronto[k]);});lines.push([`"${(c.nome||'').replace(/"/g,'""')}"`,`"${(c.seg||'').replace(/"/g,'""')}"`,`"${fmtDesde(c.desde)}"`,...cells,cp,cr,cf,stk,LABEL[st]].join(","));});
-  const csv="﻿"+lines.join("\r\n");const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ronda-postagens.csv";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  const cur=STATE.config.currentMonth||DEFAULT_MONTH;
+  const months=monthsShown(cur).slice().reverse(); // mais antigo -> mais novo
+  const rows=STATE.clientes.slice().sort((a,b)=>((a.ordem==null?1e9:a.ordem)-(b.ordem==null?1e9:b.ordem)));
+  const SEP=";"; // Excel pt-BR usa ; como separador de colunas
+  const q=v=>{v=String(v==null?"":v);return /[";\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+  const head=["Cliente","Segmento","Mês","Postados","Prontos","A fazer","Meta","Situação"];
+  const lines=[head.join(SEP)];
+  rows.forEach(c=>{
+    const pre=c.desde&&isMK(c.desde)?c.desde:null;
+    months.forEach(m=>{
+      if(pre&&m.key<pre)return; // antes da entrada do cliente: não conta
+      const p=num((c.posts||{})[m.key]),r=num((c.pronto||{})[m.key]),f=Math.max(0,META-p-r);
+      const sit=p>=META?"Completo":(f===0?"Tudo pronto, falta postar":"Faltam "+f+" a produzir");
+      lines.push([q(c.nome),q(c.seg),m.lbl+"/"+m.yr,p,r,f,META,sit].join(SEP));
+    });
+  });
+  const csv="﻿"+lines.join("\r\n");const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ronda-postagens-"+cur+".csv";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
 }
 
 document.getElementById("v-posts").addEventListener("click",async e=>{
