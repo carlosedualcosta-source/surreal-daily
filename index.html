@@ -761,17 +761,19 @@ function exportCSV(){
   const rows=STATE.clientes.slice().sort((a,b)=>((a.ordem==null?1e9:a.ordem)-(b.ordem==null?1e9:b.ordem)));
   const SEP=";"; // Excel pt-BR usa ; como separador de colunas
   const q=v=>{v=String(v==null?"":v);return /[";\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
-  const head=["Cliente","Segmento","Mês","Postados","Prontos","A fazer","Meta","Situação"];
+  // Placar: 1 linha por cliente, 1 coluna por mês (postados), + Total/Meta/%.
+  const head=["Cliente","Segmento",...months.map(m=>m.lbl+"/"+m.yr.slice(2)),"Total postado","Meta","% da meta"];
   const lines=[head.join(SEP)];
   rows.forEach(c=>{
-    const pre=c.desde&&isMK(c.desde)?c.desde:null;
-    months.forEach(m=>{
-      if(pre&&m.key<pre)return; // antes da entrada do cliente: não conta
-      const p=num((c.posts||{})[m.key]),r=num((c.pronto||{})[m.key]),f=Math.max(0,META-p-r);
-      const sit=p>=META?"Completo":(f===0?"Tudo pronto, falta postar":"Faltam "+f+" a produzir");
-      lines.push([q(c.nome),q(c.seg),m.lbl+"/"+m.yr,p,r,f,META,sit].join(SEP));
-    });
+    const pre=c.desde&&isMK(c.desde)?c.desde:null;let tot=0,meses=0;
+    const cells=months.map(m=>{if(pre&&m.key<pre)return "";meses++;const p=num((c.posts||{})[m.key]);tot+=p;return String(p);});
+    const meta=meses*META, pct=meta?Math.round(tot/meta*100)+"%":"—";
+    lines.push([q(c.nome),q(c.seg),...cells,tot,meta,pct].join(SEP));
   });
+  // Rodapé: total geral do mês atual
+  let tp=0,tr=0,tf=0;rows.forEach(c=>{const pre=c.desde&&isMK(c.desde)?c.desde:null;if(pre&&cur<pre)return;const p=num((c.posts||{})[cur]),r=num((c.pronto||{})[cur]);tp+=p;tr+=r;tf+=Math.max(0,META-p-r);});
+  lines.push("");
+  lines.push(["Mês atual ("+monthsShown(cur)[0].lbl+"/"+monthsShown(cur)[0].yr.slice(2)+")","Postados: "+tp,"Prontos p/ postar: "+tr,"A fazer: "+tf].join(SEP));
   const csv="﻿"+lines.join("\r\n");const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="ronda-postagens-"+cur+".csv";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
 }
 
